@@ -1,0 +1,565 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: games
+spec:
+  selector:
+    matchLabels:
+      app: games
+  template:
+    metadata:
+      labels:
+        app: games
+    spec:
+      containers:
+      - env:
+        - name: NATS_HOST
+          value: my-nats
+        - name: REDIS_HOST
+          value: games-redis-master
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: redis-password
+              name: games-redis
+        - name: WORDS_ADDRESS
+          value: words:50051
+        image: ghcr.io/deesejohn/games:016dfef@sha256:963780645351c880c13e7bbcd7f1f19a06cf090fc8ecc604e371fdf37edf415a
+        livenessProbe:
+          exec:
+            command:
+            - /bin/grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 10
+        name: server
+        ports:
+        - containerPort: 50051
+        readinessProbe:
+          exec:
+            command:
+            - /bin/grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 5
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: games
+spec:
+  ports:
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+  selector:
+    app: games
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: games-bff
+spec:
+  selector:
+    matchLabels:
+      app: games-bff
+  template:
+    metadata:
+      labels:
+        app: games-bff
+    spec:
+      containers:
+      - env:
+        - name: GAMES_HOST
+          value: games:50051
+        - name: HOST_PREFIX
+          value: /api/games
+        - name: NATS_HOST
+          value: my-nats
+        image: ghcr.io/deesejohn/games-bff:016dfef@sha256:56c339db700549f7719c4a2433ff79c2243639e7adce230134fbdbf52b36593a
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8000
+          initialDelaySeconds: 5
+        name: server
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8000
+          initialDelaySeconds: 10
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: games-bff
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+  selector:
+    app: games-bff
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: games-bff-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: games-bff
+            port:
+              number: 80
+        path: /api/games(/|$)(.*)
+        pathType: Prefix
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: games-spa
+spec:
+  selector:
+    matchLabels:
+      app: games-spa
+  template:
+    metadata:
+      labels:
+        app: games-spa
+    spec:
+      containers:
+      - image: ghcr.io/deesejohn/games-spa:016dfef@sha256:d083f04eec799f4a658c5091f41678559e066eb56aa6d6c5928bb07539c7dfc0
+        name: server
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: games-spa
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: games-spa
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: games-spa-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: games-spa
+            port:
+              number: 80
+        path: /games(/|$)(.*)
+        pathType: Prefix
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lobbies
+spec:
+  selector:
+    matchLabels:
+      app: lobbies
+  template:
+    metadata:
+      labels:
+        app: lobbies
+    spec:
+      containers:
+      - env:
+        - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+          value: "true"
+        - name: GAMES_HOST
+          value: http://games:50051
+        - name: HOST_PREFIX
+          value: /api/lobbies
+        - name: PLAYERS_HOST
+          value: http://players
+        - name: REDIS_HOST
+          value: lobbies-redis-master
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: redis-password
+              name: lobbies-redis
+        image: ghcr.io/deesejohn/lobbies:016dfef@sha256:788e77c40ed3e1ffa319a9d47d9b95227434bb4ad87a2f7114920a83335bf401
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 80
+          initialDelaySeconds: 5
+        name: server
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 80
+          initialDelaySeconds: 10
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lobbies
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: lobbies
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: lobbies-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: lobbies
+            port:
+              number: 80
+        path: /api/lobbies(/|$)(.*)
+        pathType: Prefix
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lobbies-spa
+spec:
+  selector:
+    matchLabels:
+      app: lobbies-spa
+  template:
+    metadata:
+      labels:
+        app: lobbies-spa
+    spec:
+      containers:
+      - image: ghcr.io/deesejohn/lobbies-spa:016dfef@sha256:7e97d8761bd247f1aa7d5d7569941fadc730822d983946c73e2414ff206d0efa
+        name: server
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lobbies-spa
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: lobbies-spa
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: lobbies-spa-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: lobbies-spa
+            port:
+              number: 80
+        path: /lobbies(/|$)(.*)
+        pathType: Prefix
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: players
+spec:
+  selector:
+    matchLabels:
+      app: players
+  template:
+    metadata:
+      labels:
+        app: players
+    spec:
+      containers:
+      - env:
+        - name: HOST_PREFIX
+          value: /api/players
+        - name: REDIS_HOST
+          value: players-redis-master
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: redis-password
+              name: players-redis
+        image: ghcr.io/deesejohn/players:016dfef@sha256:29701372e4b315ae2fb1431bab65a3a0ba4b2d04c8955f83bf4f04a0ee8b799d
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 80
+          initialDelaySeconds: 5
+        name: server
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 80
+          initialDelaySeconds: 10
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: players
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: players
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: players-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: players
+            port:
+              number: 80
+        path: /api/players(/|$)(.*)
+        pathType: Prefix
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: players-spa
+spec:
+  selector:
+    matchLabels:
+      app: players-spa
+  template:
+    metadata:
+      labels:
+        app: players-spa
+    spec:
+      containers:
+      - image: ghcr.io/deesejohn/players-spa:016dfef@sha256:fa64198ec65a139596275d94a3658454a2be2af23f117ec37ba077249eb3118c
+        name: server
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: players-spa
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: players-spa
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: players-spa-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: players-spa
+            port:
+              number: 80
+        path: /players(/|$)(.*)
+        pathType: Prefix
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: words
+spec:
+  selector:
+    matchLabels:
+      app: words
+  template:
+    metadata:
+      labels:
+        app: words
+    spec:
+      containers:
+      - image: ghcr.io/deesejohn/words:016dfef@sha256:34554f90551c0b746b0f5e6808b16491f0e8eaee7e8cbadd4d22cd7f6c3b133f
+        livenessProbe:
+          exec:
+            command:
+            - /bin/grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 10
+        name: server
+        ports:
+        - containerPort: 50051
+        readinessProbe:
+          exec:
+            command:
+            - /bin/grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 5
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: words
+spec:
+  ports:
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+  selector:
+    app: words
+  type: ClusterIP
+
+---
+apiVersion: v1
+data:
+  use-gzip: "true"
+kind: ConfigMap
+metadata:
+  name: ingress-nginx-controller
+  namespace: default
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      return 301 /lobbies;
+  name: default-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: default-backend
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+
