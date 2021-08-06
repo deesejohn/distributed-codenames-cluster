@@ -24,7 +24,7 @@ spec:
               name: games-redis
         - name: WORDS_ADDRESS
           value: words:50051
-        image: ghcr.io/deesejohn/games:e0fd402@sha256:256b5598fbb66d8ecc48c8ce1e14e54de024ab94317e78f9592b55919c58e514
+        image: ghcr.io/deesejohn/games:42a1b40@sha256:079adc7dac1726ee521ade434a356c92e829f748dda79bf4b17864daf9ee944b
         livenessProbe:
           exec:
             command:
@@ -83,7 +83,7 @@ spec:
           value: /api/games
         - name: NATS_HOST
           value: my-nats
-        image: ghcr.io/deesejohn/games-bff:e0fd402@sha256:c58d453f9c7556eddd9fc2cd9d6f8b147a2dcbc8a7809f45fa536922a6171fe7
+        image: ghcr.io/deesejohn/games-bff:42a1b40@sha256:bcc0195882f8737ebf723fafacde025409e071e4948122497ca38815eee9c6f4
         livenessProbe:
           httpGet:
             path: /health/live
@@ -118,26 +118,15 @@ spec:
     app: games-bff
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: getambassador.io/v2
+kind: Mapping
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  name: games-bff-ingress
+  name: games-bff-mapping
 spec:
-  rules:
-  - http:
-      paths:
-      - backend:
-          service:
-            name: games-bff
-            port:
-              number: 80
-        path: /api/games(/|$)(.*)
-        pathType: Prefix
+  allow_upgrade:
+  - websocket
+  prefix: /api/games/
+  service: games-bff
 
 ---
 apiVersion: apps/v1
@@ -154,7 +143,7 @@ spec:
         app: games-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/games-spa:e0fd402@sha256:ab159f55868a5762d2922e01a78c8f2c774f03916706c82dfe1abcbd44996e9b
+      - image: ghcr.io/deesejohn/games-spa:42a1b40@sha256:2fec4a3a33ff2e919bc62f318dfac71f4ae6db9fb6e23d416c49989cac072073
         name: server
         ports:
         - containerPort: 80
@@ -179,24 +168,13 @@ spec:
     app: games-spa
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: getambassador.io/v2
+kind: Mapping
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  name: games-spa-ingress
+  name: games-spa-mapping
 spec:
-  rules:
-  - http:
-      paths:
-      - backend:
-          service:
-            name: games-spa
-            port:
-              number: 80
-        path: /games(/|$)(.*)
-        pathType: Prefix
+  prefix: /games
+  service: games-spa
 
 ---
 apiVersion: apps/v1
@@ -229,7 +207,7 @@ spec:
             secretKeyRef:
               key: redis-password
               name: lobbies-redis
-        image: ghcr.io/deesejohn/lobbies:e0fd402@sha256:d0abb254231b836c92942887370ab0f67f03ac809264475a0f1ec9380b197fa8
+        image: ghcr.io/deesejohn/lobbies:42a1b40@sha256:b4ff9b3563b58f57941555a5b6c73a5031e12732431579c8bfda134d87c154cf
         livenessProbe:
           httpGet:
             path: /health/live
@@ -264,26 +242,15 @@ spec:
     app: lobbies
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: getambassador.io/v2
+kind: Mapping
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  name: lobbies-ingress
+  name: lobbies-mapping
 spec:
-  rules:
-  - http:
-      paths:
-      - backend:
-          service:
-            name: lobbies
-            port:
-              number: 80
-        path: /api/lobbies(/|$)(.*)
-        pathType: Prefix
+  allow_upgrade:
+  - websocket
+  prefix: /api/lobbies/
+  service: lobbies
 
 ---
 apiVersion: apps/v1
@@ -300,7 +267,7 @@ spec:
         app: lobbies-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/lobbies-spa:e0fd402@sha256:2c28e115bbbcc91f0d83f69f79a26ff6572d556aee5b37541799dc4b302ed88e
+      - image: ghcr.io/deesejohn/lobbies-spa:42a1b40@sha256:9924de2f2b56967642dce3090452b39943defdc9f4cf5867a7170fd8bdcd0d66
         name: server
         ports:
         - containerPort: 80
@@ -325,24 +292,13 @@ spec:
     app: lobbies-spa
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: getambassador.io/v2
+kind: Mapping
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  name: lobbies-spa-ingress
+  name: lobbies-spa-mapping
 spec:
-  rules:
-  - http:
-      paths:
-      - backend:
-          service:
-            name: lobbies-spa
-            port:
-              number: 80
-        path: /lobbies(/|$)(.*)
-        pathType: Prefix
+  prefix: /lobbies
+  service: lobbies-spa
 
 ---
 apiVersion: apps/v1
@@ -369,7 +325,7 @@ spec:
             secretKeyRef:
               key: redis-password
               name: players-redis
-        image: ghcr.io/deesejohn/players:e0fd402@sha256:bb88fa6f7db77d9c4e7ba9c523147446e4aa6f226be01a35905e1f684fd7d642
+        image: ghcr.io/deesejohn/players:42a1b40@sha256:3c49694e1f08e2ed6a61b309d9de39ede8d194a1a4b9a3707fa092326a139666
         livenessProbe:
           httpGet:
             path: /health/live
@@ -404,24 +360,13 @@ spec:
     app: players
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: getambassador.io/v2
+kind: Mapping
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  name: players-ingress
+  name: players-mapping
 spec:
-  rules:
-  - http:
-      paths:
-      - backend:
-          service:
-            name: players
-            port:
-              number: 80
-        path: /api/players(/|$)(.*)
-        pathType: Prefix
+  prefix: /api/players/
+  service: players
 
 ---
 apiVersion: apps/v1
@@ -438,7 +383,7 @@ spec:
         app: players-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/players-spa:e0fd402@sha256:d66b5e542e5c46151991418ed251fd31a69a0547121587d1303f8832133739eb
+      - image: ghcr.io/deesejohn/players-spa:42a1b40@sha256:bf6c1e2bc32fd11c22ee66fe20f6efd9b8740af0a43dce1f096f7368d04d07a8
         name: server
         ports:
         - containerPort: 80
@@ -463,24 +408,13 @@ spec:
     app: players-spa
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: getambassador.io/v2
+kind: Mapping
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-  name: players-spa-ingress
+  name: players-spa-mapping
 spec:
-  rules:
-  - http:
-      paths:
-      - backend:
-          service:
-            name: players-spa
-            port:
-              number: 80
-        path: /players(/|$)(.*)
-        pathType: Prefix
+  prefix: /players
+  service: players-spa
 
 ---
 apiVersion: apps/v1
@@ -497,7 +431,7 @@ spec:
         app: words
     spec:
       containers:
-      - image: ghcr.io/deesejohn/words:e0fd402@sha256:54e773e2551f439919a681197a5fdf1e46cc6662769d19118c4b332c1f36a044
+      - image: ghcr.io/deesejohn/words:42a1b40@sha256:dc2711898bba9e8e44ac60b3062303f3d46ba3d7cef718b9c39abc5969c514b2
         livenessProbe:
           exec:
             command:
@@ -535,22 +469,11 @@ spec:
   type: ClusterIP
 
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: getambassador.io/v2
+kind: Mapping
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      return 301 /lobbies;
-  name: default-ingress
+  name: root-mapping
 spec:
-  rules:
-  - http:
-      paths:
-      - backend:
-          service:
-            name: default-backend
-            port:
-              number: 80
-        path: /
-        pathType: Prefix
+  prefix: /
+  prefix_redirect: /lobbies
+  service: lobbies-spa
