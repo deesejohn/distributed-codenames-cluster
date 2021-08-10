@@ -1,5 +1,5 @@
 apiVersion: v2
-name: ingress-nginx
+name: emissary-ingress
 description: Ingress controller
 
 # A chart can be either an 'application' or a 'library' chart.
@@ -21,8 +21,8 @@ version: 0.1.0
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "1.16.0"
+appVersion: "1.13.10"
 dependencies:
-- name: ingress-nginx
-  version: 3.30.0
-  repository: https://kubernetes.github.io/ingress-nginx
+  - name: ambassador
+    version: 6.7.13
+    repository: https://www.getambassador.io
