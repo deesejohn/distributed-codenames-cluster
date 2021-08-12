@@ -1,2 +1,1 @@
-cluster:
-  enabled: false
+architecture: standalone
