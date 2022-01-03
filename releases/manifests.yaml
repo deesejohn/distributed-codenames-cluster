@@ -24,22 +24,13 @@ spec:
               name: games-redis
         - name: WORDS_ADDRESS
           value: words:50051
-        image: ghcr.io/deesejohn/games:9721376@sha256:18bc23eab6526a0483e0100cb47b6047137a09ceec469efc462c1eb5cf94dd65
+        image: ghcr.io/deesejohn/games:ba73c79@sha256:3eeecaa2098394bd9b64ef4dd7a2e3d7ac9a567fcf623adf9608b8addb4a4d64
         livenessProbe:
-          exec:
-            command:
-            - /bin/grpc_health_probe
-            - -addr=:50051
-          initialDelaySeconds: 10
+          grpc:
+            port: 50051
         name: server
         ports:
         - containerPort: 50051
-        readinessProbe:
-          exec:
-            command:
-            - /bin/grpc_health_probe
-            - -addr=:50051
-          initialDelaySeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -76,7 +67,7 @@ spec:
           value: /api/games
         - name: NATS_HOST
           value: my-nats
-        image: ghcr.io/deesejohn/games-bff:9721376@sha256:b43fbb2f4080f0b07384753f4a64e22fb579e4f0d3bd58b9710cd32c9fe1a9df
+        image: ghcr.io/deesejohn/games-bff:ba73c79@sha256:679d44603fb8015be173e20ad5b13bcf3244731edbed6fa3758b547b84491406
         livenessProbe:
           httpGet:
             path: /health/live
@@ -89,7 +80,7 @@ spec:
           httpGet:
             path: /health/ready
             port: 8000
-          initialDelaySeconds: 10
+          initialDelaySeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -107,6 +98,8 @@ spec:
 apiVersion: getambassador.io/v2
 kind: Mapping
 metadata:
+  labels:
+    defaulthost: host
   name: games-bff-mapping
 spec:
   allow_upgrade:
@@ -129,10 +122,14 @@ spec:
         app: games-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/games-spa:9721376@sha256:1e0466ed3ba114a6090119735c1f4717aa286141e5de018a5326a690481bc915
+      - image: ghcr.io/deesejohn/games-spa:ba73c79@sha256:45ffd1a8e815f2420681991c349f1b3e1641ff0390900791d13d7b55638902ce
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
         name: server
         ports:
-        - containerPort: 80
+        - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -142,14 +139,16 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 80
+    targetPort: 8080
   selector:
     app: games-spa
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v2
+apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
+  labels:
+    defaulthost: host
   name: games-spa-mapping
 spec:
   prefix: /games
@@ -186,20 +185,18 @@ spec:
             secretKeyRef:
               key: redis-password
               name: lobbies-redis
-        image: ghcr.io/deesejohn/lobbies:9721376@sha256:00b694a48f131e9d38f53b43e62e1b1cacf59755e9cc5f4a17234ad38efef733
+        image: ghcr.io/deesejohn/lobbies:ba73c79@sha256:e8b05e0ca33cf1f48bcd17e1bae6a3b53735f87cd80c2414317e6e695048fadb
         livenessProbe:
           httpGet:
             path: /health/live
-            port: 80
-          initialDelaySeconds: 5
+            port: 8080
         name: server
         ports:
-        - containerPort: 80
+        - containerPort: 8080
         readinessProbe:
           httpGet:
             path: /health/ready
-            port: 80
-          initialDelaySeconds: 10
+            port: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -209,14 +206,16 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 80
+    targetPort: 8080
   selector:
     app: lobbies
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v2
+apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
+  labels:
+    defaulthost: host
   name: lobbies-mapping
 spec:
   allow_upgrade:
@@ -239,10 +238,14 @@ spec:
         app: lobbies-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/lobbies-spa:9721376@sha256:b966ca8d64d72da7d5b642e7e8d09959ed041e00d36fd314086997b7643ef2b9
+      - image: ghcr.io/deesejohn/lobbies-spa:ba73c79@sha256:c39c90b0b0e310805d6b8732cef31387be283c4843467f66b8d148c4c8c9517b
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
         name: server
         ports:
-        - containerPort: 80
+        - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -252,14 +255,16 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 80
+    targetPort: 8080
   selector:
     app: lobbies-spa
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v2
+apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
+  labels:
+    defaulthost: host
   name: lobbies-spa-mapping
 spec:
   prefix: /lobbies
@@ -290,20 +295,18 @@ spec:
             secretKeyRef:
               key: redis-password
               name: players-redis
-        image: ghcr.io/deesejohn/players:9721376@sha256:10318815834d4122b17419e1464d6befdde8801b8eea867509dfc522d612a9c2
+        image: ghcr.io/deesejohn/players:ba73c79@sha256:aa187ed584263d768b7cbb495a245ab78ed09ccfe8f96e165477793f9ad9f539
         livenessProbe:
           httpGet:
             path: /health/live
-            port: 80
-          initialDelaySeconds: 5
+            port: 8080
         name: server
         ports:
-        - containerPort: 80
+        - containerPort: 8080
         readinessProbe:
           httpGet:
             path: /health/ready
-            port: 80
-          initialDelaySeconds: 10
+            port: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -313,14 +316,16 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 80
+    targetPort: 8080
   selector:
     app: players
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v2
+apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
+  labels:
+    defaulthost: host
   name: players-mapping
 spec:
   prefix: /api/players/
@@ -341,10 +346,14 @@ spec:
         app: players-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/players-spa:9721376@sha256:b34bf74293ffd7575b4251e04804b6512b2368d1e154b664328d4da143387443
+      - image: ghcr.io/deesejohn/players-spa:ba73c79@sha256:d94b37ef635040f0f3a0c0f6937f3e0e6bc260b1329f48583c2c16078700497a
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
         name: server
         ports:
-        - containerPort: 80
+        - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -354,14 +363,16 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 80
+    targetPort: 8080
   selector:
     app: players-spa
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v2
+apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
+  labels:
+    defaulthost: host
   name: players-spa-mapping
 spec:
   prefix: /players
@@ -382,22 +393,13 @@ spec:
         app: words
     spec:
       containers:
-      - image: ghcr.io/deesejohn/words:9721376@sha256:b0c3c51ca7aa429393b10b44e586a387f80e594f1aa3c47d75442c6553be4267
+      - image: ghcr.io/deesejohn/words:ba73c79@sha256:3f6d2e376cca0a46923a766794c04e0991e2e8c43f2e680800bf1c8e26270935
         livenessProbe:
-          exec:
-            command:
-            - /bin/grpc_health_probe
-            - -addr=:50051
-          initialDelaySeconds: 10
+          grpc:
+            port: 50051
         name: server
         ports:
         - containerPort: 50051
-        readinessProbe:
-          exec:
-            command:
-            - /bin/grpc_health_probe
-            - -addr=:50051
-          initialDelaySeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -413,9 +415,37 @@ spec:
   type: ClusterIP
 
 ---
-apiVersion: getambassador.io/v2
+apiVersion: getambassador.io/v3alpha1
+kind: Listener
+metadata:
+  name: emissary-ingress-listener-8080
+  namespace: emissary
+spec:
+  hostBinding:
+    namespace:
+      from: ALL
+  port: 8080
+  protocol: HTTP
+  securityModel: XFP
+---
+apiVersion: getambassador.io/v3alpha1
+kind: Host
+metadata:
+  name: default-host
+spec:
+  hostname: '*'
+  mappingSelector:
+    matchLabels:
+      defaulthost: host
+  requestPolicy:
+    insecure:
+      action: Route
+---
+apiVersion: getambassador.io/v3alpha1
 kind: Mapping
 metadata:
+  labels:
+    defaulthost: host
   name: root-mapping
 spec:
   prefix: /
