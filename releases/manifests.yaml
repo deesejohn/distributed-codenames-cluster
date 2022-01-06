@@ -1,3 +1,41 @@
+apiVersion: getambassador.io/v3alpha1
+kind: Listener
+metadata:
+  name: emissary-ingress-listener-8080
+  namespace: emissary
+spec:
+  hostBinding:
+    namespace:
+      from: ALL
+  port: 8080
+  protocol: HTTP
+  securityModel: XFP
+---
+apiVersion: getambassador.io/v3alpha1
+kind: Host
+metadata:
+  name: default-host
+spec:
+  hostname: '*'
+  mappingSelector:
+    matchLabels:
+      defaulthost: host
+  requestPolicy:
+    insecure:
+      action: Route
+---
+apiVersion: getambassador.io/v3alpha1
+kind: Mapping
+metadata:
+  labels:
+    defaulthost: host
+  name: root-mapping
+spec:
+  prefix: /
+  prefix_redirect: /lobbies
+  service: lobbies-spa
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,7 +62,7 @@ spec:
               name: games-redis
         - name: WORDS_ADDRESS
           value: words:50051
-        image: ghcr.io/deesejohn/games:c2d609e@sha256:3eeecaa2098394bd9b64ef4dd7a2e3d7ac9a567fcf623adf9608b8addb4a4d64
+        image: ghcr.io/deesejohn/games:0afed3a@sha256:3eeecaa2098394bd9b64ef4dd7a2e3d7ac9a567fcf623adf9608b8addb4a4d64
         livenessProbe:
           grpc:
             port: 50051
@@ -67,7 +105,7 @@ spec:
           value: /api/games
         - name: NATS_HOST
           value: my-nats
-        image: ghcr.io/deesejohn/games-bff:c2d609e@sha256:b892cd75e3cd7c327972f71ef19b207408b17fb0815ad227c4f9a62fb818d6cf
+        image: ghcr.io/deesejohn/games-bff:0afed3a@sha256:126d0365c154409fd66b1b8a560a790e82693324179a0fff17ea4906fcbb298b
         livenessProbe:
           httpGet:
             path: /health/live
@@ -122,7 +160,7 @@ spec:
         app: games-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/games-spa:c2d609e@sha256:a22ab5465370ed04069102f819d7b4104ad81aa5bd44097f5f6095e45095322f
+      - image: ghcr.io/deesejohn/games-spa:0afed3a@sha256:eb58336e7bc5e905ffad9a2340c622613709dc3c29983ad1fffb888a6b81b402
         livenessProbe:
           httpGet:
             path: /health/live
@@ -185,7 +223,7 @@ spec:
             secretKeyRef:
               key: redis-password
               name: lobbies-redis
-        image: ghcr.io/deesejohn/lobbies:c2d609e@sha256:0c93b91655c1d1a4557038eb47b5005006dad3ce20c5732ae2cf9cca622d1231
+        image: ghcr.io/deesejohn/lobbies:0afed3a@sha256:57ae289077f06d65a96d658c92cb41f7669d8fd95897b7365fc7a2dfb7d09101
         livenessProbe:
           httpGet:
             path: /health/live
@@ -238,7 +276,7 @@ spec:
         app: lobbies-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/lobbies-spa:c2d609e@sha256:a79fb4ddadc0907914fe043842d07e5f8049a618ccfcae36cace50ef98200694
+      - image: ghcr.io/deesejohn/lobbies-spa:0afed3a@sha256:1afad76d5db70994dacb0de32496d9fabfdafb3abec707f5b19097324d3cca2f
         livenessProbe:
           httpGet:
             path: /health/live
@@ -295,7 +333,7 @@ spec:
             secretKeyRef:
               key: redis-password
               name: players-redis
-        image: ghcr.io/deesejohn/players:c2d609e@sha256:f74e7b1a9d84c4362e0dd01c935ec9a0c84d26a605adf46d53541f2e11d7d824
+        image: ghcr.io/deesejohn/players:0afed3a@sha256:26ec01d96b54ce07195a30391afc7797eef90412c3d0dd6dc7731380c05b2370
         livenessProbe:
           httpGet:
             path: /health/live
@@ -346,7 +384,7 @@ spec:
         app: players-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/players-spa:c2d609e@sha256:434dcb67e3263f46e081870337734dc572414eacde7ddb65bb0f5e9fe79b3ed3
+      - image: ghcr.io/deesejohn/players-spa:0afed3a@sha256:7724587fa9769509c2e5850e7837af7ff9869c3754f397187e958a54b45d93a3
         livenessProbe:
           httpGet:
             path: /health/live
@@ -393,7 +431,7 @@ spec:
         app: words
     spec:
       containers:
-      - image: ghcr.io/deesejohn/words:c2d609e@sha256:3f6d2e376cca0a46923a766794c04e0991e2e8c43f2e680800bf1c8e26270935
+      - image: ghcr.io/deesejohn/words:0afed3a@sha256:3f6d2e376cca0a46923a766794c04e0991e2e8c43f2e680800bf1c8e26270935
         livenessProbe:
           grpc:
             port: 50051
@@ -413,41 +451,3 @@ spec:
   selector:
     app: words
   type: ClusterIP
-
----
-apiVersion: getambassador.io/v3alpha1
-kind: Listener
-metadata:
-  name: emissary-ingress-listener-8080
-  namespace: emissary
-spec:
-  hostBinding:
-    namespace:
-      from: ALL
-  port: 8080
-  protocol: HTTP
-  securityModel: XFP
----
-apiVersion: getambassador.io/v3alpha1
-kind: Host
-metadata:
-  name: default-host
-spec:
-  hostname: '*'
-  mappingSelector:
-    matchLabels:
-      defaulthost: host
-  requestPolicy:
-    insecure:
-      action: Route
----
-apiVersion: getambassador.io/v3alpha1
-kind: Mapping
-metadata:
-  labels:
-    defaulthost: host
-  name: root-mapping
-spec:
-  prefix: /
-  prefix_redirect: /lobbies
-  service: lobbies-spa
