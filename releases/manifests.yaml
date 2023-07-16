@@ -49,13 +49,13 @@ spec:
         app: words
     spec:
       containers:
-      - image: ghcr.io/deesejohn/words:c90f5bf@sha256:cad0befafda05ea65d2aacac6b31f97bca3a62388644469337851860702d2e34
-        livenessProbe:
-          grpc:
-            port: 50051
-        name: server
-        ports:
-        - containerPort: 50051
+        - image: ghcr.io/deesejohn/words:93a2912@sha256:7b79fceb1159ce43d0235657b62cb4a10d5b40a66bdf1821ca0458bfb86eae76
+          livenessProbe:
+            grpc:
+              port: 50051
+          name: server
+          ports:
+            - containerPort: 50051
 ---
 apiVersion: v1
 kind: Service
@@ -63,9 +63,9 @@ metadata:
   name: words
 spec:
   ports:
-  - name: grpc
-    port: 50051
-    targetPort: 50051
+    - name: grpc
+      port: 50051
+      targetPort: 50051
   selector:
     app: words
   type: ClusterIP
@@ -84,25 +84,25 @@ spec:
         app: games
     spec:
       containers:
-      - env:
-        - name: NATS_HOST
-          value: my-nats
-        - name: REDIS_HOST
-          value: games-redis-master
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: redis-password
-              name: games-redis
-        - name: WORDS_ADDRESS
-          value: words:50051
-        image: ghcr.io/deesejohn/games:c90f5bf@sha256:3956e3659d4d150040b5097764fe318789f053c1a802ca047e9486102ae585dc
-        livenessProbe:
-          grpc:
-            port: 50051
-        name: server
-        ports:
-        - containerPort: 50051
+        - env:
+            - name: NATS_HOST
+              value: my-nats
+            - name: REDIS_HOST
+              value: games-redis-master
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: redis-password
+                  name: games-redis
+            - name: WORDS_ADDRESS
+              value: words:50051
+          image: ghcr.io/deesejohn/games:93a2912@sha256:c2ec544016e0d24fb8e80ff232c8f25ed5e5ef37f59612c8042e26ad33b68fa6
+          livenessProbe:
+            grpc:
+              port: 50051
+          name: server
+          ports:
+            - containerPort: 50051
 ---
 apiVersion: v1
 kind: Service
@@ -110,9 +110,9 @@ metadata:
   name: games
 spec:
   ports:
-  - name: grpc
-    port: 50051
-    targetPort: 50051
+    - name: grpc
+      port: 50051
+      targetPort: 50051
   selector:
     app: games
   type: ClusterIP
@@ -131,27 +131,27 @@ spec:
         app: games-bff
     spec:
       containers:
-      - env:
-        - name: GAMES_HOST
-          value: games:50051
-        - name: HOST_PREFIX
-          value: /api/games
-        - name: NATS_HOST
-          value: my-nats
-        image: ghcr.io/deesejohn/games-bff:c90f5bf@sha256:6b0731ec503374930a802c2418f95676ba0a07f916d8dafd0d9599d7a5cf4663
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: 8000
-          initialDelaySeconds: 5
-        name: server
-        ports:
-        - containerPort: 8000
-        readinessProbe:
-          httpGet:
-            path: /health/ready
-            port: 8000
-          initialDelaySeconds: 5
+        - env:
+            - name: GAMES_HOST
+              value: games:50051
+            - name: HOST_PREFIX
+              value: /api/games
+            - name: NATS_HOST
+              value: my-nats
+          image: ghcr.io/deesejohn/games-bff:93a2912@sha256:14a9492469d92681af363296e89992282007ca9e6b9d5c9794724e8c098baf52
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            initialDelaySeconds: 5
+          name: server
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -159,9 +159,9 @@ metadata:
   name: games-bff
 spec:
   ports:
-  - name: http
-    port: 80
-    targetPort: 8000
+    - name: http
+      port: 80
+      targetPort: 8000
   selector:
     app: games-bff
   type: ClusterIP
@@ -174,7 +174,7 @@ metadata:
   name: games-bff-mapping
 spec:
   allow_upgrade:
-  - websocket
+    - websocket
   prefix: /api/games/
   service: games-bff
 ---
@@ -192,14 +192,14 @@ spec:
         app: games-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/games-spa:c90f5bf@sha256:cebd89f746b2710d41ed1c8f370b78a763d4360832be7289414da5db06ba1c1d
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: 8080
-        name: server
-        ports:
-        - containerPort: 8080
+        - image: ghcr.io/deesejohn/games-spa:93a2912@sha256:37088b7dd8b895dff0eab07d8f9e489421d05111791a29c3660c149fd0e8676b
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+          name: server
+          ports:
+            - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -207,9 +207,9 @@ metadata:
   name: games-spa
 spec:
   ports:
-  - name: http
-    port: 80
-    targetPort: 8080
+    - name: http
+      port: 80
+      targetPort: 8080
   selector:
     app: games-spa
   type: ClusterIP
@@ -238,34 +238,34 @@ spec:
         app: lobbies
     spec:
       containers:
-      - env:
-        - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
-          value: "true"
-        - name: GAMES_HOST
-          value: http://games:50051
-        - name: HOST_PREFIX
-          value: /api/lobbies
-        - name: PLAYERS_HOST
-          value: http://players
-        - name: REDIS_HOST
-          value: lobbies-redis-master
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: redis-password
-              name: lobbies-redis
-        image: ghcr.io/deesejohn/lobbies:c90f5bf@sha256:2e41dd89231c0876729a4788d1e86a3f02d49086f7f8e859dcf74834a5e04b83
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: 8080
-        name: server
-        ports:
-        - containerPort: 8080
-        readinessProbe:
-          httpGet:
-            path: /health/ready
-            port: 8080
+        - env:
+            - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+              value: "true"
+            - name: GAMES_HOST
+              value: http://games:50051
+            - name: HOST_PREFIX
+              value: /api/lobbies
+            - name: PLAYERS_HOST
+              value: http://players
+            - name: REDIS_HOST
+              value: lobbies-redis-master
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: redis-password
+                  name: lobbies-redis
+          image: ghcr.io/deesejohn/lobbies:93a2912@sha256:a5149115f1823341244d17ab5a4385751f9d24441ddde1f3ef99bf3336043654
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+          name: server
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -273,9 +273,9 @@ metadata:
   name: lobbies
 spec:
   ports:
-  - name: http
-    port: 80
-    targetPort: 8080
+    - name: http
+      port: 80
+      targetPort: 8080
   selector:
     app: lobbies
   type: ClusterIP
@@ -288,7 +288,7 @@ metadata:
   name: lobbies-mapping
 spec:
   allow_upgrade:
-  - websocket
+    - websocket
   prefix: /api/lobbies/
   service: lobbies
 ---
@@ -306,14 +306,14 @@ spec:
         app: lobbies-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/lobbies-spa:c90f5bf@sha256:741483e099cd0e5aff3dc782966dc422c043596c053587b3f551426a402121e9
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: 8080
-        name: server
-        ports:
-        - containerPort: 8080
+        - image: ghcr.io/deesejohn/lobbies-spa:93a2912@sha256:9c368a0c9f731240c9c48ffa5e67fa2c8e50e5e047d982e84eb90bceeaec25b5
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+          name: server
+          ports:
+            - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -321,9 +321,9 @@ metadata:
   name: lobbies-spa
 spec:
   ports:
-  - name: http
-    port: 80
-    targetPort: 8080
+    - name: http
+      port: 80
+      targetPort: 8080
   selector:
     app: lobbies-spa
   type: ClusterIP
@@ -352,28 +352,28 @@ spec:
         app: players
     spec:
       containers:
-      - env:
-        - name: HOST_PREFIX
-          value: /api/players
-        - name: REDIS_HOST
-          value: players-redis-master
-        - name: REDIS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: redis-password
-              name: players-redis
-        image: ghcr.io/deesejohn/players:c90f5bf@sha256:cd27d68c62c2f09d808d9cfc57c87c4e40c90d43c6459d3582f19ecfa77161a9
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: 8080
-        name: server
-        ports:
-        - containerPort: 8080
-        readinessProbe:
-          httpGet:
-            path: /health/ready
-            port: 8080
+        - env:
+            - name: HOST_PREFIX
+              value: /api/players
+            - name: REDIS_HOST
+              value: players-redis-master
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: redis-password
+                  name: players-redis
+          image: ghcr.io/deesejohn/players:93a2912@sha256:cf62ce290bb2ba57b73d61bd5f19df999a9927d9a04b2b9540855626dd4ca5a4
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+          name: server
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -381,9 +381,9 @@ metadata:
   name: players
 spec:
   ports:
-  - name: http
-    port: 80
-    targetPort: 8080
+    - name: http
+      port: 80
+      targetPort: 8080
   selector:
     app: players
   type: ClusterIP
@@ -412,14 +412,14 @@ spec:
         app: players-spa
     spec:
       containers:
-      - image: ghcr.io/deesejohn/players-spa:c90f5bf@sha256:ed7d8144baa1867995a98984ea35b76ac15cab4c99ece7815fe859a98af4c6fa
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: 8080
-        name: server
-        ports:
-        - containerPort: 8080
+        - image: ghcr.io/deesejohn/players-spa:93a2912@sha256:1d0feaab114e2bc7f5443e93c895a433f7e58683462b34a6cef587614b9eb45a
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+          name: server
+          ports:
+            - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -427,9 +427,9 @@ metadata:
   name: players-spa
 spec:
   ports:
-  - name: http
-    port: 80
-    targetPort: 8080
+    - name: http
+      port: 80
+      targetPort: 8080
   selector:
     app: players-spa
   type: ClusterIP
