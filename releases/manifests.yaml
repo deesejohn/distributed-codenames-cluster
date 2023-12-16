@@ -1,39 +1,43 @@
-apiVersion: getambassador.io/v3alpha1
-kind: Listener
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
 metadata:
-  name: emissary-ingress-listener-8080
-  namespace: emissary
+  name: eg
 spec:
-  hostBinding:
-    namespace:
-      from: ALL
-  port: 8080
-  protocol: HTTP
-  securityModel: XFP
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: getambassador.io/v3alpha1
-kind: Host
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
 metadata:
-  name: default-host
+  name: eg
 spec:
-  hostname: '*'
-  mappingSelector:
-    matchLabels:
-      defaulthost: host
-  requestPolicy:
-    insecure:
-      action: Route
+  gatewayClassName: eg
+  listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
+      port: 80
+      protocol: HTTP
 ---
-apiVersion: getambassador.io/v3alpha1
-kind: Mapping
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
 metadata:
-  labels:
-    defaulthost: host
-  name: root-mapping
+  name: http-filter-redirect
 spec:
-  prefix: /
-  prefix_redirect: /lobbies
-  service: lobbies-spa
+  parentRefs:
+    - name: eg
+  rules:
+    - filters:
+        - requestRedirect:
+            path:
+              replaceFullPath: /lobbies
+              type: ReplaceFullPath
+            statusCode: 302
+          type: RequestRedirect
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -49,7 +53,7 @@ spec:
         app: words
     spec:
       containers:
-        - image: ghcr.io/deesejohn/words:0e5d336@sha256:b5512082d3ebc69c77ef37357280df6d482b605aa297e1b6ef07670257fc296d
+        - image: ghcr.io/deesejohn/words:8af67e6@sha256:4bc919d97415bbdb996ac123f0fb379bc13a9f487d827c75268948130bebdb9f
           livenessProbe:
             grpc:
               port: 50051
@@ -86,7 +90,7 @@ spec:
       containers:
         - env:
             - name: NATS_HOST
-              value: my-nats
+              value: nats
             - name: REDIS_HOST
               value: games-redis-master
             - name: REDIS_PASSWORD
@@ -96,7 +100,7 @@ spec:
                   name: games-redis
             - name: WORDS_ADDRESS
               value: words:50051
-          image: ghcr.io/deesejohn/games:0e5d336@sha256:dc17834d7575ec783b7db3e6b5bfd419e3357afa9b4aeba8994a50d24cd9c5cf
+          image: ghcr.io/deesejohn/games:8af67e6@sha256:0c53d68d3cd4061e2a493577aed857a9502bc58b66df05a327d7074e2892ed72
           livenessProbe:
             grpc:
               port: 50051
@@ -137,8 +141,8 @@ spec:
             - name: HOST_PREFIX
               value: /api/games
             - name: NATS_HOST
-              value: my-nats
-          image: ghcr.io/deesejohn/games-bff:0e5d336@sha256:84a63481764b6323f171da4c5425946c04970b5ec3791cb04f397d67d0640155
+              value: nats
+          image: ghcr.io/deesejohn/games-bff:8af67e6@sha256:0098801b88d58d67197a087738331bd1c5a9d54511748cbff2dcfb4f8b159f43
           livenessProbe:
             httpGet:
               path: /health/live
@@ -166,17 +170,27 @@ spec:
     app: games-bff
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v2
-kind: Mapping
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
 metadata:
-  labels:
-    defaulthost: host
-  name: games-bff-mapping
+  name: games-bff-route
 spec:
-  allow_upgrade:
-    - websocket
-  prefix: /api/games/
-  service: games-bff
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - name: games-bff
+          port: 80
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              replacePrefixMatch: /
+              type: ReplacePrefixMatch
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api/games/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -192,7 +206,7 @@ spec:
         app: games-spa
     spec:
       containers:
-        - image: ghcr.io/deesejohn/games-spa:0e5d336@sha256:6feb36a06da7776f818d051de6e7773223d806e3a2f09a4c2cbf2ef2511796b0
+        - image: ghcr.io/deesejohn/games-spa:8af67e6@sha256:53eabe67c72422ec62615304cc862490ac580b48eebcdd0cf65479bbe8bedb6d
           livenessProbe:
             httpGet:
               path: /health/live
@@ -214,15 +228,27 @@ spec:
     app: games-spa
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v3alpha1
-kind: Mapping
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
 metadata:
-  labels:
-    defaulthost: host
-  name: games-spa-mapping
+  name: games-spa-route
 spec:
-  prefix: /games
-  service: games-spa
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - name: games-spa
+          port: 80
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              replacePrefixMatch: /
+              type: ReplacePrefixMatch
+      matches:
+        - path:
+            type: PathPrefix
+            value: /games
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -241,6 +267,8 @@ spec:
         - env:
             - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
               value: "true"
+            - name: DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE
+              value: "false"
             - name: GAMES_HOST
               value: http://games:50051
             - name: HOST_PREFIX
@@ -254,7 +282,7 @@ spec:
                 secretKeyRef:
                   key: redis-password
                   name: lobbies-redis
-          image: ghcr.io/deesejohn/lobbies:0e5d336@sha256:3b27f0b9b0cce4a2e545960179b4884c747b7437e89e697da21829f7e4503c0d
+          image: ghcr.io/deesejohn/lobbies:8af67e6@sha256:c58a4664edcfa7a4db4bea063e779d51e67afd70acbf771b810ab1a67d5bf7a5
           livenessProbe:
             httpGet:
               path: /health/live
@@ -280,17 +308,27 @@ spec:
     app: lobbies
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v3alpha1
-kind: Mapping
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
 metadata:
-  labels:
-    defaulthost: host
-  name: lobbies-mapping
+  name: lobbies-api-route
 spec:
-  allow_upgrade:
-    - websocket
-  prefix: /api/lobbies/
-  service: lobbies
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - name: lobbies
+          port: 80
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              replacePrefixMatch: /
+              type: ReplacePrefixMatch
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api/lobbies/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -306,7 +344,7 @@ spec:
         app: lobbies-spa
     spec:
       containers:
-        - image: ghcr.io/deesejohn/lobbies-spa:0e5d336@sha256:24699efa77bc14e7c370cd8dbe49f65c2bd0e58bbd26eac1b54ceda0a7936731
+        - image: ghcr.io/deesejohn/lobbies-spa:8af67e6@sha256:f6cc7019d93de64260d44694cb7c4cd0746cb33d789075bacae7dc1fdab948cd
           livenessProbe:
             httpGet:
               path: /health/live
@@ -328,15 +366,27 @@ spec:
     app: lobbies-spa
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v3alpha1
-kind: Mapping
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
 metadata:
-  labels:
-    defaulthost: host
-  name: lobbies-spa-mapping
+  name: lobbies-spa-route
 spec:
-  prefix: /lobbies
-  service: lobbies-spa
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - name: lobbies-spa
+          port: 80
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              replacePrefixMatch: /
+              type: ReplacePrefixMatch
+      matches:
+        - path:
+            type: PathPrefix
+            value: /lobbies
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -362,7 +412,7 @@ spec:
                 secretKeyRef:
                   key: redis-password
                   name: players-redis
-          image: ghcr.io/deesejohn/players:0e5d336@sha256:282b558177dcd1e915a2b00dc7fb8b874d599d3fc954cb74539d59e3131a2880
+          image: ghcr.io/deesejohn/players:8af67e6@sha256:1c702004756bd910fa3dda72fdde89fc82cb34cc1e6de67ae382f249bc307d5b
           livenessProbe:
             httpGet:
               path: /health/live
@@ -386,17 +436,28 @@ spec:
       targetPort: 8080
   selector:
     app: players
-  type: ClusterIP
 ---
-apiVersion: getambassador.io/v3alpha1
-kind: Mapping
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
 metadata:
-  labels:
-    defaulthost: host
-  name: players-mapping
+  name: players-api-route
 spec:
-  prefix: /api/players/
-  service: players
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - name: players
+          port: 80
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              replacePrefixMatch: /
+              type: ReplacePrefixMatch
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api/players/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -412,7 +473,7 @@ spec:
         app: players-spa
     spec:
       containers:
-        - image: ghcr.io/deesejohn/players-spa:0e5d336@sha256:8e36904907218248fe3ad5a08d243675bd71fc259c8307e1b8bf62d3ac755aff
+        - image: ghcr.io/deesejohn/players-spa:8af67e6@sha256:a08ab9961dbb7c472f6c3419e712efac8e99398c4b0031c71750005e41fe0d9a
           livenessProbe:
             httpGet:
               path: /health/live
@@ -434,12 +495,24 @@ spec:
     app: players-spa
   type: ClusterIP
 ---
-apiVersion: getambassador.io/v3alpha1
-kind: Mapping
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
 metadata:
-  labels:
-    defaulthost: host
-  name: players-spa-mapping
+  name: players-spa-route
 spec:
-  prefix: /players
-  service: players-spa
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - name: players-spa
+          port: 80
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              replacePrefixMatch: /
+              type: ReplacePrefixMatch
+      matches:
+        - path:
+            type: PathPrefix
+            value: /players
