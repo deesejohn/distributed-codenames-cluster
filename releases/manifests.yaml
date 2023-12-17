@@ -53,7 +53,7 @@ spec:
         app: words
     spec:
       containers:
-        - image: ghcr.io/deesejohn/words:8af67e6@sha256:4bc919d97415bbdb996ac123f0fb379bc13a9f487d827c75268948130bebdb9f
+        - image: ghcr.io/deesejohn/words:9d1ee79@sha256:4bc919d97415bbdb996ac123f0fb379bc13a9f487d827c75268948130bebdb9f
           livenessProbe:
             grpc:
               port: 50051
@@ -100,7 +100,7 @@ spec:
                   name: games-redis
             - name: WORDS_ADDRESS
               value: words:50051
-          image: ghcr.io/deesejohn/games:8af67e6@sha256:0c53d68d3cd4061e2a493577aed857a9502bc58b66df05a327d7074e2892ed72
+          image: ghcr.io/deesejohn/games:9d1ee79@sha256:0c53d68d3cd4061e2a493577aed857a9502bc58b66df05a327d7074e2892ed72
           livenessProbe:
             grpc:
               port: 50051
@@ -142,7 +142,7 @@ spec:
               value: /api/games
             - name: NATS_HOST
               value: nats
-          image: ghcr.io/deesejohn/games-bff:8af67e6@sha256:0098801b88d58d67197a087738331bd1c5a9d54511748cbff2dcfb4f8b159f43
+          image: ghcr.io/deesejohn/games-bff:9d1ee79@sha256:bf28e81dfa85036188d30d439d9eae915cc927bd08f65c3b81f451c284c5c506
           livenessProbe:
             httpGet:
               path: /health/live
@@ -206,7 +206,7 @@ spec:
         app: games-spa
     spec:
       containers:
-        - image: ghcr.io/deesejohn/games-spa:8af67e6@sha256:53eabe67c72422ec62615304cc862490ac580b48eebcdd0cf65479bbe8bedb6d
+        - image: ghcr.io/deesejohn/games-spa:9d1ee79@sha256:53eabe67c72422ec62615304cc862490ac580b48eebcdd0cf65479bbe8bedb6d
           livenessProbe:
             httpGet:
               path: /health/live
@@ -282,7 +282,7 @@ spec:
                 secretKeyRef:
                   key: redis-password
                   name: lobbies-redis
-          image: ghcr.io/deesejohn/lobbies:8af67e6@sha256:c58a4664edcfa7a4db4bea063e779d51e67afd70acbf771b810ab1a67d5bf7a5
+          image: ghcr.io/deesejohn/lobbies:9d1ee79@sha256:72d9a228e881cc891e637c70117d58fa454819da3f3be1e6d0eecfdd60427104
           livenessProbe:
             httpGet:
               path: /health/live
@@ -344,7 +344,7 @@ spec:
         app: lobbies-spa
     spec:
       containers:
-        - image: ghcr.io/deesejohn/lobbies-spa:8af67e6@sha256:f6cc7019d93de64260d44694cb7c4cd0746cb33d789075bacae7dc1fdab948cd
+        - image: ghcr.io/deesejohn/lobbies-spa:9d1ee79@sha256:f6cc7019d93de64260d44694cb7c4cd0746cb33d789075bacae7dc1fdab948cd
           livenessProbe:
             httpGet:
               path: /health/live
@@ -412,7 +412,7 @@ spec:
                 secretKeyRef:
                   key: redis-password
                   name: players-redis
-          image: ghcr.io/deesejohn/players:8af67e6@sha256:1c702004756bd910fa3dda72fdde89fc82cb34cc1e6de67ae382f249bc307d5b
+          image: ghcr.io/deesejohn/players:9d1ee79@sha256:1c702004756bd910fa3dda72fdde89fc82cb34cc1e6de67ae382f249bc307d5b
           livenessProbe:
             httpGet:
               path: /health/live
@@ -473,7 +473,7 @@ spec:
         app: players-spa
     spec:
       containers:
-        - image: ghcr.io/deesejohn/players-spa:8af67e6@sha256:a08ab9961dbb7c472f6c3419e712efac8e99398c4b0031c71750005e41fe0d9a
+        - image: ghcr.io/deesejohn/players-spa:9d1ee79@sha256:a08ab9961dbb7c472f6c3419e712efac8e99398c4b0031c71750005e41fe0d9a
           livenessProbe:
             httpGet:
               path: /health/live
